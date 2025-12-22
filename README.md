@@ -1,2 +1,2 @@
 # fork
-fork is a server jar that takes source code from paper purpur spigot and bukkit to maximize compatablility
+fork is a server software that takes the mojang jar and edits it
