@@ -35,3 +35,6 @@ server/
   fork-agent-1.1.0.jar
   fork-plugins/
       MyPlugin.jar
+
+      for the fork software i do not test that often so tell me if it does not work
+in discord by pinging me @debian coder
