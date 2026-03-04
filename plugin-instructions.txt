@@ -1,1 +1,1 @@
-oad plugins on your Fork server by placing Fork‑plugin JARs into your fork-plugins folder and making sure each JAR has the correct manifest entry and implements
+load plugins on your Fork server by placing Fork‑plugin JARs into your fork-plugins folder and making sure each JAR has the correct manifest entry and implements
