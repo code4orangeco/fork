@@ -1,99 +1,130 @@
-these are the manifests for fork to make plugins
+because you built the entire Fork plugin architecture yourself. A Fork plugin is just:
 
-You can use any manifest keys you want, but only one is actually required by your Fork plugin system. Everything else is optional metadata that you can define for your own loader.
+A JAR file
 
-To make this clear and useful, here are:
+With a MANIFEST.MF containing Fork metadata
 
-The required manifest entry your loader already supports
+And a main class that implements your ForkPlugin interface
 
-Optional manifest entries you can add (and how they would work)
+Loaded by the Fork Agent at runtime
 
-A complete example manifest
+Receiving onEnable(), onTick(), and events from your event bus
 
-How to extend your loader to support more keys
+Below is a complete, structured guide with copy‑and‑paste code, folder layout, and build commands.
 
-🔑 Required manifest entry (your system already uses this)
-Your Fork plugin loader requires exactly one key:
-
-Fork-Plugin-Class
-Points to the main class of the plugin
-
-Must implement your ForkPlugin interface
-
-Without this, the plugin will not load
-
-Example:
-
+🧱 1. Folder structure for a Fork plugin
 Code
-Fork-Plugin-Class: com.example.myplugin.MyPlugin
-🧩 Optional manifest entries you can support
-These are not built-in to your system yet, but they are common in plugin ecosystems and easy to add.
-
-Fork-Plugin-Name
-Human-readable name.
-
-Code
-Fork-Plugin-Name: MyPlugin
-Fork-Plugin-Version
-Version string.
-
-Code
-Fork-Plugin-Version: 1.0.0
-Fork-Plugin-Author
-Plugin author.
-
-Code
-Fork-Plugin-Author: orangeco
-Fork-Plugin-Description
-Short description.
-
-Code
-Fork-Plugin-Description: Adds custom features to the Fork server.
-Fork-Plugin-Depends
-Comma-separated list of other Fork plugins that must load first.
-
-Code
-Fork-Plugin-Depends: CoreLib, Utils
-Fork-Plugin-SoftDepends
-Optional dependencies.
-
-Code
-Fork-Plugin-SoftDepends: ChatAPI
-Fork-Plugin-LoadBefore
-Plugins that should load after this one.
-
-Code
-Fork-Plugin-LoadBefore: WorldTweaks
-Fork-Plugin-API-Version
-If you ever version your ForkPlugin interface.
-
-Code
-Fork-Plugin-API-Version: 1
-📦 Full example manifest (recommended format)
-Code
-Manifest-Version: 1.0
-Fork-Plugin-Class: com.example.myplugin.MyPlugin
-Fork-Plugin-Name: MyPlugin
-Fork-Plugin-Version: 1.0.0
-Fork-Plugin-Author: orangeco
-Fork-Plugin-Description: A test plugin for the Fork server.
-Fork-Plugin-Depends: CoreLib
-Fork-Plugin-SoftDepends: ChatAPI
-Fork-Plugin-LoadBefore: WorldTweaks
-Fork-Plugin-API-Version: 1
-🛠️ How to extend your loader to support these keys
-Inside your plugin loader, after reading the manifest:
+my-fork-plugin/
+ ├─ src/
+ │   └─ main/
+ │       └─ java/
+ │           └─ com/example/myplugin/
+ │               └─ Main.java
+ └─ pom.xml
+🧩 2. The ForkPlugin interface (from your agent)
+Your plugin must implement:
 
 java
-Attributes attrs = jarManifest.getMainAttributes();
+package com.forkserver.plugin;
 
-String mainClass = attrs.getValue("Fork-Plugin-Class");
-String name = attrs.getValue("Fork-Plugin-Name");
-String version = attrs.getValue("Fork-Plugin-Version");
-String author = attrs.getValue("Fork-Plugin-Author");
-String description = attrs.getValue("Fork-Plugin-Description");
-String depends = attrs.getValue("Fork-Plugin-Depends");
-String softDepends = attrs.getValue("Fork-Plugin-SoftDepends");
-String loadBefore = attrs.getValue("Fork-Plugin-LoadBefore");
-String apiVersion = attrs.getValue("Fork-Plugin-API-Version");
-Then you can store these in a ForkPluginDescription object.
+public interface ForkPlugin {
+    void onEnable();
+    void onTick();
+    void setDescription(ForkPluginDescription description);
+    ForkPluginDescription getDescription();
+}
+🧠 3. Create your plugin main class
+src/main/java/com/example/myplugin/Main.java
+
+java
+package com.example.myplugin;
+
+import com.forkserver.plugin.ForkPlugin;
+import com.forkserver.plugin.ForkPluginDescription;
+
+public class Main implements ForkPlugin {
+
+    private ForkPluginDescription description;
+
+    @Override
+    public void onEnable() {
+        System.out.println("[MyPlugin] Enabled! Version: " + description.getVersion());
+    }
+
+    @Override
+    public void onTick() {
+        // Runs every server tick
+        // System.out.println("[MyPlugin] Tick!");
+    }
+
+    @Override
+    public void setDescription(ForkPluginDescription description) {
+        this.description = description;
+    }
+
+    @Override
+    public ForkPluginDescription getDescription() {
+        return description;
+    }
+}
+📦 4. Add MANIFEST.MF entries (Fork plugin metadata)
+Your Fork Agent reads plugin metadata from the JAR manifest.
+
+Add this to your Maven pom.xml:
+
+xml
+<build>
+    <plugins>
+        <plugin>
+            <groupId>org.apache.maven.plugins</groupId>
+            <artifactId>maven-jar-plugin</artifactId>
+            <version>3.2.0</version>
+            <configuration>
+                <archive>
+                    <manifestEntries>
+                        <Fork-Plugin-Class>com.example.myplugin.Main</Fork-Plugin-Class>
+                        <Fork-Plugin-Name>MyPlugin</Fork-Plugin-Name>
+                        <Fork-Plugin-Version>1.0.0</Fork-Plugin-Version>
+                        <Fork-Plugin-Author>orangeco</Fork-Plugin-Author>
+                        <Fork-Plugin-Description>A test plugin for Fork.</Fork-Plugin-Description>
+                    </manifestEntries>
+                </archive>
+            </configuration>
+        </plugin>
+    </plugins>
+</build>
+These keys are required by your loader.
+
+🛠 5. Build the plugin
+From inside your plugin folder:
+
+bash
+mvn clean package
+Your plugin JAR will appear in:
+
+Code
+target/my-fork-plugin-1.0.0.jar
+📁 6. Install the plugin into Fork
+Copy the JAR into your Fork plugin folder:
+
+bash
+cp target/my-fork-plugin-1.0.0.jar ~/fork-agent/fork-plugins/
+🚀 7. Run the server with the Fork Agent
+From your server directory:
+
+bash
+java -javaagent:fork-agent/target/fork-agent-1.1.0.jar -jar server.jar
+You should see:
+
+Code
+[MyPlugin] Enabled! Version: 1.0.0
+🎉 8. Optional: Listen to events
+Example: PlayerJoinEvent
+
+java
+ForkPluginManager.getInstance()
+    .getEventBus()
+    .register(PlayerJoinEvent.class, event -> {
+        System.out.println("[MyPlugin] Player joined: " + event.getPlayerName());
+    });
+Put this inside onEnable().
