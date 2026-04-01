@@ -1,153 +1,193 @@
-# fork
-fork is a server software that takes the mojang jar and edits it
-you run the server with java -javaagent:<your server name wihtout the lessthan and greaterthan signs> -jar server.jar
+🌟 Fork‑Agent Plugin Development Guide
+A complete guide for creating plugins for the Fork‑Agent modding system.
 
-how to make a fork plugin:
-because you built the entire Fork plugin architecture yourself. A Fork plugin is just:
+📦 1. Project Structure
+Every plugin follows this structure:
 
-A JAR file
-
-With a MANIFEST.MF containing Fork metadata
-
-And a main class that implements your ForkPlugin interface
-
-Loaded by the Fork Agent at runtime
-
-Receiving onEnable(), onTick(), and events from your event bus
-
-Below is a complete, structured guide with copy‑and‑paste code, folder layout, and build commands.
-
-🧱 1. Folder structure for a Fork plugin
 Code
-my-fork-plugin/
- ├─ src/
- │   └─ main/
- │       └─ java/
- │           └─ com/example/myplugin/
- │               └─ Main.java
- └─ pom.xml
-🧩 2. The ForkPlugin interface (from your agent)
-Your plugin must implement:
+MyPlugin/
+│
+├── src/
+│   ├── main/
+│   │   ├── java/
+│   │   │   └── me/yourname/myplugin/MyPlugin.java
+│   │   └── resources/
+│   │       └── plugin.fork
+│   └── test/ (optional)
+│
+└── MyPlugin.jar (built output)
+🧩 2. Plugin Manifest (plugin.fork)
+Create:
+
+Code
+src/main/resources/plugin.fork
+Paste:
+
+Code
+name: MyPlugin
+main: me.yourname.myplugin.MyPlugin
+version: 1.0.0
+author: YourName
+🚀 3. Basic Plugin Class
+Create:
+
+Code
+src/main/java/me/yourname/myplugin/MyPlugin.java
+Paste:
 
 java
-package com.forkserver.plugin;
+package me.yourname.myplugin;
 
-public interface ForkPlugin {
-    void onEnable();
-    void onTick();
-    void setDescription(ForkPluginDescription description);
-    ForkPluginDescription getDescription();
-}
-🧠 3. Create your plugin main class
-src/main/java/com/example/myplugin/Main.java
+import me.arjun.forkagent.api.ForkPlugin;
 
-java
-package com.example.myplugin;
+public class MyPlugin implements ForkPlugin {
 
-import com.forkserver.plugin.ForkPlugin;
-import com.forkserver.plugin.ForkPluginDescription;
-
-public class Main implements ForkPlugin {
-
-    private ForkPluginDescription description;
+    @Override
+    public void onLoad() {
+        log("Loaded!");
+    }
 
     @Override
     public void onEnable() {
-        System.out.println("[MyPlugin] Enabled! Version: " + description.getVersion());
+        log("Enabled!");
     }
 
     @Override
-    public void onTick() {
-        // Runs every server tick
-        // System.out.println("[MyPlugin] Tick!");
+    public void onDisable() {
+        log("Disabled!");
     }
 
-    @Override
-    public void setDescription(ForkPluginDescription description) {
-        this.description = description;
-    }
-
-    @Override
-    public ForkPluginDescription getDescription() {
-        return description;
+    private void log(String msg) {
+        System.out.println("[MyPlugin] " + msg);
     }
 }
-📦 4. Add MANIFEST.MF entries (Fork plugin metadata)
-Your Fork Agent reads plugin metadata from the JAR manifest.
+🧵 4. Commands
+Your plugin system exposes a simple command API:
 
-Add this to your Maven pom.xml:
-
-xml
-<build>
-    <plugins>
-        <plugin>
-            <groupId>org.apache.maven.plugins</groupId>
-            <artifactId>maven-jar-plugin</artifactId>
-            <version>3.2.0</version>
-            <configuration>
-                <archive>
-                    <manifestEntries>
-                        <Fork-Plugin-Class>com.example.myplugin.Main</Fork-Plugin-Class>
-                        <Fork-Plugin-Name>MyPlugin</Fork-Plugin-Name>
-                        <Fork-Plugin-Version>1.0.0</Fork-Plugin-Version>
-                        <Fork-Plugin-Author>orangeco</Fork-Plugin-Author>
-                        <Fork-Plugin-Description>A test plugin for Fork.</Fork-Plugin-Description>
-                    </manifestEntries>
-                </archive>
-            </configuration>
-        </plugin>
-    </plugins>
-</build>
-These keys are required by your loader.
-
-🛠 5. Build the plugin
-From inside your plugin folder:
-
-bash
-mvn clean package
-Your plugin JAR will appear in:
+java
+@Override
+public void onEnable() {
+    getCommandRegistry().register("hello", (player, args) -> {
+        player.sendMessage("Hello from MyPlugin!");
+    });
+}
+Usage in game:
 
 Code
-target/my-fork-plugin-1.0.0.jar
-📁 6. Install the plugin into Fork
-Copy the JAR into your Fork plugin folder:
+/hello
+🎧 5. Events
+Example: Player join event
+
+java
+@Override
+public void onEnable() {
+    getEventBus().subscribe(PlayerJoinEvent.class, event -> {
+        event.getPlayer().sendMessage("Welcome to the server!");
+    });
+}
+Example: Block break event
+
+java
+getEventBus().subscribe(BlockBreakEvent.class, event -> {
+    log(event.getPlayer().getName() + " broke " + event.getBlock());
+});
+🧍 6. Player API
+Examples:
+
+java
+Player p = event.getPlayer();
+
+p.sendMessage("Hello!");
+p.setHealth(20);
+p.teleport(100, 64, 100);
+p.giveItem("minecraft:diamond", 5);
+⏱ 7. Scheduler
+Run a repeating task:
+
+java
+getScheduler().runRepeating(() -> {
+    log("Tick!");
+}, 20); // every 20 ticks
+Run a delayed task:
+
+java
+getScheduler().runLater(() -> {
+    log("This ran 5 seconds later!");
+}, 100);
+📜 8. Custom Logging
+Your plugin can log with:
+
+java
+log("Something happened!");
+Or advanced logging:
+
+java
+getLogger().info("Info message");
+getLogger().warn("Warning!");
+getLogger().error("Error!");
+🧱 9. Custom Items
+Example: Create a custom sword
+
+java
+ItemBuilder builder = new ItemBuilder("myplugin:super_sword")
+        .displayName("§bSuper Sword")
+        .damage(10)
+        .unbreakable(true);
+
+getItemRegistry().register(builder.build());
+Give it to a player:
+
+java
+player.giveItem("myplugin:super_sword", 1);
+🍳 10. Custom Recipes
+Example: Craft diamond from dirt:
+
+java
+Recipe r = new Recipe("myplugin:dirt_to_diamond")
+        .shape("DDD", "DDD", "DDD")
+        .ingredient('D', "minecraft:dirt")
+        .result("minecraft:diamond");
+
+getRecipeRegistry().register(r);
+🌐 11. Networking Hooks
+Send a custom packet:
+
+java
+getNetwork().send(player, new MyCustomPacket("hello"));
+Receive packets:
+
+java
+getNetwork().on(MyCustomPacket.class, (player, packet) -> {
+    log("Received: " + packet.getMessage());
+});
+🌍 12. World API
+Examples:
+
+java
+World world = getServer().getWorld("world");
+
+world.setBlock(100, 64, 100, "minecraft:diamond_block");
+world.spawnEntity("minecraft:zombie", 105, 64, 105);
+world.setTime(18000); // midnight
+world.broadcast("Hello world!");
+🛠 13. Building the Plugin
+Compile:
 
 bash
-cp target/my-fork-plugin-1.0.0.jar ~/fork-agent/fork-plugins/
-🚀 7. Run the server with the Fork Agent
-From your server directory:
+javac -cp ../../fork-agent.jar -d out $(find src/main/java -name "*.java")
+Package:
 
 bash
-java -javaagent:fork-agent/target/fork-agent-1.1.0.jar -jar server.jar
+jar --create --file MyPlugin.jar -C out . -C src/main/resources .
+Place into:
+
+Code
+fork-plugins/
+🎉 14. Run the Server
+bash
+java -javaagent:fork-agent.jar -jar server.jar
 You should see:
 
 Code
-[MyPlugin] Enabled! Version: 1.0.0
-🎉 8. Optional: Listen to events
-Example: PlayerJoinEvent
-
-java
-ForkPluginManager.getInstance()
-    .getEventBus()
-    .register(PlayerJoinEvent.class, event -> {
-        System.out.println("[MyPlugin] Player joined: " + event.getPlayerName());
-    });
-Put this inside onEnable().
-
-
-
-
-
-
-
-
-
-use this file structure 
-server/
-  server.jar
-  fork-agent-1.1.0.jar
-  fork-plugins/
-      MyPlugin.jar (name can be anything)
-
-      for the fork software i do not test that often so tell me if it does not work
-in discord by pinging me @dev_debiancoder
+[MyPlugin] Loaded!
+[MyPlugin] Enabled!
